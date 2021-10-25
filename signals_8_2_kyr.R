@@ -97,40 +97,44 @@ for (i in unique(res_out$entity_id)){
 ## summarise results
 x <- bp_dat %>% group_by(entity_id) %>% summarise(n_bp = n())
 
-## grps
-grps <- read.csv("82_signal_grps.csv")
-colnames(grps)[1] <- "entity_id"
-
 ## entities with 2 breakpoints
 x2 <- x %>% filter(n_bp == 2) # 26
 
-for (i in seq(9,28,9)){
+# plot each record individually
+for (i in seq(9,27,9)){
   entities <- x2$entity_id[(i-8):i]
   subdat <- dtrend_dat %>% filter(entity_id %in% entities)
   sub_bp <- bp_dat %>% filter(entity_id %in% entities)
   
   file_no <- ifelse(i == 9, 1, ifelse(i == 18, 2, 3))
   filename <- paste("signals_82_", file_no, ".pdf", sep = "")
-  
-  p <- ggplot() + geom_line(data = subdat, aes(x = interp_age, y = d18O_detrended)) +
+
+  pdf(filename, width = 20/2.54, height = 18/2.54)
+  ggplot() + geom_line(data = subdat, aes(x = interp_age, y = d18O_detrended)) +
     geom_vline(data = sub_bp, aes(xintercept = bp), col = "red") +
     facet_wrap(.~ entity_id)
-  pdf(filename, width = 20/2.54, height = 18/2.54)
-  print(p)
   dev.off()
 }
 
 # exclude entities: 53, 54, 295, 374, 388, 395, 540, 608, 690
-x2 <- x2 %>% filter(!entity_id %in% c(53, 54, 295, 374, 388, 395, 540, 608, 690)) # 20 entities
+#x2 <- x2 %>% filter(!entity_id %in% c(53, 54, 295, 374, 388, 395, 540, 608, 690)) # 20 entities
+x2 <- x2 %>% filter(!entity_id %in% c(51, 53, 295, 374, 690))
 
 anom_2bp <- data.frame()
 for (i in unique(x2$entity_id)){
   sub_bp <- bp_dat %>% filter(entity_id == i)
   subdat <- dtrend_dat %>% filter(entity_id == i)
   
+  # sig diff from base:
+  subdat <- subdat %>% arrange(interp_age)
+  sub_bp <- sub_bp %>% arrange(bp)
+  subdat$grp <- cut(subdat$interp_age, breaks = c(min(subdat$interp_age), sub_bp$bp, max(subdat$interp_age)), labels = 1:3)
+  t_test <- t.test(x = subdat[which(subdat$grp == 2),"d18O_detrended"], y = subdat[which(subdat$grp %in% c(1,3)),"d18O_detrended"])
+  
   d18O_event <- subdat %>% filter(interp_age >= min(sub_bp$bp) & interp_age <= max(sub_bp$bp)) %>% summarise(mean(d18O_detrended))
   event_CI25 <- subdat %>% filter(interp_age >= min(sub_bp$CI2_5) & interp_age <= max(sub_bp$CI2_5)) %>% summarise(mean(d18O_detrended))
   d18O_base <- subdat %>% filter(interp_age <= min(sub_bp$bp) | interp_age >= max(sub_bp$bp)) %>% summarise(mean(d18O_detrended))
+  d18Osd_base <- subdat %>% filter(interp_age <= min(sub_bp$bp) | interp_age >= max(sub_bp$bp)) %>% summarise(sd(d18O_detrended))
   
   anom <- d18O_event - d18O_base
 
@@ -140,16 +144,27 @@ for (i in unique(x2$entity_id)){
                        sample_id_max_bp = subdat[which.min(abs(subdat$interp_age-as.numeric(max(sub_bp$bp)))),"sample_id"],
                        anom = as.numeric(anom),
                        d18O_base = as.numeric(d18O_base),
-                       d18O_event = as.numeric(d18O_event))
+                       d18O_event = as.numeric(d18O_event),
+                       d18Osd_base = as.numeric(d18Osd_base),
+                       ttest_Pval = t_test$p.value)
   
   anom_2bp <- rbind(anom_2bp, sub_df)
 }
+
+anom_2bp$x <- with(anom_2bp, ifelse(abs(anom) > d18Osd_base, "yes", "no"))
+anom_2bp$diff_from_base_sd <- anom_2bp$d18Osd_base - abs(anom_2bp$anom)
+
+xx <- anom_2bp %>% filter(entity_id %in% c(53, 54, 295, 374, 388, 395, 540, 608, 690))
 
 ggplot(data = anom_2bp, aes(x = longitude, y = latitude, fill = anom)) +
   geom_point(shape = 21) +
   borders("world") +
   scale_fill_gradient2(high = "red", mid = "white", low = "blue")
 
+
+## grps
+grps <- read.csv("82_signal_grps.csv")
+colnames(grps)[1] <- "entity_id"
 
 ## entities with 3 breakpoints
 x3 <- x %>% filter(n_bp == 3) # 23
@@ -171,6 +186,21 @@ for (i in seq(9,28,9)){
   dev.off()
 }
 
+# 
+for (i in unique(x3$entity_id)){
+  subdat <- dtrend_dat %>% filter(entity_id == i) %>% arrange(interp_age)
+  sub_bp <- bp_dat %>% filter(entity_id == i) %>% arrange(bp)
+  
+  subdat$grp <- with(subdat, ifelse(interp_age <= sub_bp$bp[1] | interp_age >= sub_bp$bp[3], 1,
+                       ifelse(interp_age >= sub_bp$bp[1] & interp_age <= sub_bp$bp[2], 2, 3)))
+  subdat$grp <- as.factor(subdat$grp)
+  sub.lm <- lm(d18O_detrended ~ grp, data = subdat)
+  sub.av <- aov(sub.lm)
+  
+  sub_hsd <- TukeyHSD(sub.av)$grp
+  sub_hsd2 <- HSD.test(sub.av, trt = 'grp', alpha = 0.001)
+}
+
 # exclude entities: 63, 142, 436, 279, 546, 613
 x3 <- x3 %>% filter(!entity_id %in% c(63, 142, 279, 436, 546, 613)) # 14 entities
 
@@ -178,6 +208,21 @@ x3 <- x3 %>% filter(!entity_id %in% c(63, 142, 279, 436, 546, 613)) # 14 entitie
 
 ## entities with 4 breakpoints
 x4 <- x %>% filter(n_bp == 4) # 9
+
+for (i in unique(x4$entity_id)){
+  subdat <- dtrend_dat %>% filter(entity_id == i) %>% arrange(interp_age)
+  sub_bp <- bp_dat %>% filter(entity_id == i) %>% arrange(bp)
+  
+  subdat$grp <- with(subdat, ifelse(interp_age <= sub_bp$bp[1] | interp_age >= sub_bp$bp[4], 1,
+                                    ifelse(interp_age >= sub_bp$bp[1] & interp_age <= sub_bp$bp[2], 2, 
+                                           ifelse(interp_age >= sub_bp$bp[2] & interp_age <= sub_bp$bp[3], 3, 4))))
+  subdat$grp <- as.factor(subdat$grp)
+  sub.lm <- lm(d18O_detrended ~ grp, data = subdat)
+  sub.av <- aov(sub.lm)
+  
+  sub_hsd <- TukeyHSD(sub.av)$grp
+  sub_hsd2 <- HSD.test(sub.av, trt = 'grp', alpha = 0.001)
+}
 
 # visualise
 subdat <- dtrend_dat %>% filter(entity_id %in% x4$entity_id)
@@ -200,7 +245,19 @@ x4 <- x4 %>% filter(!entity_id %in% c(220,351,415))
 
 ## 5 bp's
 x5 <- x %>% filter(n_bp == 5) # 2
-x5 <- x5 %>% filter(entity_id == 591)
+subdat <- dtrend_dat %>% filter(entity_id == 591)
+sub_bp <- bp_dat %>% filter(entity_id == 591)
+
+subdat$grp <- with(subdat, ifelse(interp_age <= sub_bp$bp[1] | interp_age >= sub_bp$bp[5], 1,
+                                  ifelse(interp_age >= sub_bp$bp[1] & interp_age <= sub_bp$bp[2], 2, 
+                                         ifelse(interp_age >= sub_bp$bp[2] & interp_age <= sub_bp$bp[3], 3,
+                                                ifelse(interp_age >= sub_bp$bp[3] & interp_age <= sub_bp$bp[4], 4, 5)))))
+subdat$grp <- as.factor(subdat$grp)
+sub.lm <- lm(d18O_detrended ~ grp, data = subdat)
+sub.av <- aov(sub.lm)
+
+sub_hsd <- TukeyHSD(sub.av)$grp
+sub_hsd2 <- HSD.test(sub.av, trt = 'grp', alpha = 0.001)
 
 sub_bp <- bp_dat %>% filter(entity_id %in% x5$entity_id)
 sub_bp <- sub_bp[order(sub_bp$bp),]
@@ -239,7 +296,7 @@ for (i in unique(x_all$entity_id)){
 }
 
 
-all_dat <- rbind(anom_2bp, anom_bp)
+all_dat <- rbind(anom_2bp[,-c(14:17)], anom_bp)
 all_dat$duration <- all_dat$max_bp - all_dat$min_bp
 all_dat$event_centre <- all_dat$max_bp - (all_dat$duration/2)
 
@@ -248,6 +305,9 @@ all_dat$event_centre <- all_dat$max_bp - (all_dat$duration/2)
 nonSISAL <- read.csv("C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/nonSISAL_82_signals.csv")
 
 all_dat <- rbind(all_dat, nonSISAL)
+
+write.csv(all_dat, "spel_82_signals.csv", row.names = F)
+all_dat <- read.csv("spel_82_signals.csv")
 
 
 ## entities with no bp
@@ -260,10 +320,52 @@ ggplot() +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red") +
   coord_fixed(ylim = c(-50,60), xlim = c(-120,150))
 
-write.csv(nosignal, "abrupt_Holocene/spel_nosignal.csv", row.names = F)
+write.csv(no_signal, "C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/spel_nosignal_82.csv", row.names = F)
 
-y <- dtrend_dat %>% filter(entity_id %in% c(295,385,387))
-y_bp <- bp_dat %>% filter(entity_id %in% c(295,385,387))
-ggplot() +
-  geom_vline(data = y_bp, aes(xintercept = bp, col = as.factor(entity_id))) +
-  geom_line(data = y, aes(x = interp_age, y = d18O_detrended, col = as.factor(entity_id)))
+
+## Do sites with multiple entities show agreement amongst records
+mult_ent <- all_dat %>% group_by(site_id, site_name) %>% mutate(n_ent = n()) %>% filter(n_ent > 1)
+
+# Q1 are signals is the same direction - e.g. both +ve, both -ve
+mult_ent2 <- data.frame()
+for (i in unique(mult_ent$site_id)){
+  subdat <- mult_ent %>% filter(site_id == i)
+  
+  if (all(subdat$anom >= 0) | all(subdat$anom <= 0)){
+    subdat$signals_agree <- "yes"
+  } else {
+    subdat$signals_agree <- "no"
+  }
+  
+  mult_ent2 <- rbind(mult_ent2, subdat)
+}
+
+# Q2 are signals reasonably contemporaneous (at least overlapping in time)?
+mult_ent3 <- data.frame()
+for (i in unique(mult_ent2$site_id)){
+  subdat <- mult_ent2 %>% filter(site_id == i)
+  
+  if (min(subdat$max_bp) > max(subdat$min_bp)){
+    subdat$overlapping <- "yes"
+  } else {
+    subdat$overlapping <- "no"
+  }
+  mult_ent3 <- rbind(mult_ent3, subdat)
+}
+
+
+## timings
+ggplot(data = all_dat, aes(x = min_bp)) + geom_density() +
+  geom_vline(mapping = aes(xintercept = 8088), col = "red") + 
+  geom_vline(mapping = aes(xintercept = median(all_dat$min_bp)))
+ggplot(data = all_dat, aes(x = max_bp)) + geom_density() + 
+  geom_vline(mapping = aes(xintercept = 8248), col = "red") +
+  geom_vline(mapping = aes(xintercept = median(all_dat$max_bp)))
+
+
+Europe <- all_dat %>% filter(latitude >= 20 & latitude <= 50 & longitude >= -10 & longitude <= 45)
+Asia <- all_dat %>% filter(latitude >= 0 & latitude <= 45 & longitude >= 50 & longitude <= 150)
+S_America <- all_dat %>% filter(latitude >= -30 & latitude <= 0 & longitude >= -100 & longitude <= -30)
+
+t.test(x = Asia$max_bp, y = S_America$max_bp)
+t.test(x = Asia$min_bp, y = S_America$min_bp)
