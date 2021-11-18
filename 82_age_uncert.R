@@ -6,6 +6,7 @@ library(ggplot2)
 
 ## Load 8.2ka entities 
 entities_8_2 <- read.csv("speleothem_8_2_kyr_signals/spel_82_signals.csv")
+entities_8_2 <- read.csv("C:/Users/ph805612/OneDrive - University of Reading/Documents/abrupt_Holocene/spel_82_signals.csv")
 
 # connect to SISAL database
 mydb <- dbConnect(MySQL(), user = "root", password = "BevRed921", dbname = "sisal_v2", 
@@ -53,12 +54,12 @@ for (i in 1:nrow(entities_8_2)){
   age_uncert_df <- rbind(age_uncert_df, ent_out)
 }
 write.csv(age_uncert_df, "C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/speleothem_8_2_kyr_signals/age_uncert_med_Qs.csv", row.names = F)
-#age_uncert_df <- read.csv("speleothem_8_2_kyr_signals/age_uncert_med_Qs.csv")
+age_uncert_df <- read.csv("C:/Users/ph805612/OneDrive - University of Reading/Documents/abrupt_Holocene/age_uncert_med_Qs.csv")
 
 
 orig_only <- entities_8_2 %>% filter(entity_id %in% entities_8_2[no_SISAL_chron, "entity_id"])
 write.csv(orig_only, "C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/speleothem_8_2_kyr_signals/82_orig_chron_only.csv", row.names = T)
-#orig_only <- read.csv("82_orig_chron_only.csv")
+orig_only <- read.csv("C:/Users/ph805612/OneDrive - University of Reading/Documents/abrupt_Holocene/82_orig_chron_only.csv")
 
 rm(list = ls()[!ls() %in% c("entities_8_2", "age_uncert_df", "orig_only")])
 
@@ -95,7 +96,7 @@ for (i in unique(age_uncert_df$entity_id)){
   
   x$anom <- sub_ent$anom
   
-  age_uncert_82 <- rbind(age_uncert_82, x)
+  age_uncert_82 <- rbind(age_uncert_82, as.data.frame(x))
   
 }
 
