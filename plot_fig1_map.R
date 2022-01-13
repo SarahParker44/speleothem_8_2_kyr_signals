@@ -24,6 +24,9 @@ wokam_DF <- merge(wokamMap, wokam@data, by = "id")
 
 # load spel sites
 sites_82 <- read.csv("spel_82_signals.csv")
+sites_no82 <- read.csv("C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/spel_nosignal_82.csv")
+sites_82 <- rbind(sites_82[,1:6], sites_no82)
+
 sites_Hol <- read.csv("C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/Hol_bp_nentities.csv")
 sites_Hol <- sites_Hol %>% group_by(site_id, entity_id, longitude, latitude) %>% summarise(n()) 
 
@@ -31,6 +34,7 @@ sites_82$grp <- "8.2 ka analysis"
 sites_Hol$grp <- "Holocene analysis"
 
 all_sites <- rbind(sites_Hol[,c(1:4,6)], sites_82[,c(1,3,5:6,16)])
+all_sites <- rbind(sites_Hol[,c(1:4,6)], sites_82[,c(1,3,5:7)])
 
 all_sites$grp <- factor(all_sites$grp, c("Holocene analysis", "8.2 ka analysis"))
 
@@ -55,3 +59,27 @@ ggplot() +
         legend.background = element_rect(fill = NA),
         legend.key = element_rect(fill = NA),
         legend.position = c(0.13, 0.25))
+
+
+ggplot() +
+  geom_polygon(data = wokam_DF, aes(x = long, y = lat, fill = "Carbonate bedrock", group = id)) +
+  scale_fill_manual(values = "#FDAE6B") + ## find paler shade of orange
+  
+  geom_path(data = wmap_DF, aes(x = long, y = lat, group = group), col = "dark grey") +
+  
+  new_scale_fill() +
+  geom_point(data = filter(all_sites, grp == "8.2 ka analysis"), aes(x = longitude, y = latitude, fill = factor(grp, levels = c("Holocene analysis", "8.2 ka analysis")), shape = factor(grp, levels = c("Holocene analysis", "8.2 ka analysis"))), col = "dark grey", size = 3) +
+  scale_fill_manual(values = c("#5D3A9B","#73F1C5")) +
+  scale_shape_manual(values = c(21,24)) +
+  
+  theme_bw() +
+  coord_cartesian(ylim = c(-50,65), xlim = c(-150,170)) +
+  theme(axis.title = element_blank(),
+        legend.title = element_blank(),
+        panel.background = element_rect(fill = "#F6FFFF"),
+        axis.text = element_blank(),
+        axis.ticks.length = unit(-0.1, "cm"),
+        legend.background = element_rect(fill = NA),
+        legend.key = element_rect(fill = NA),
+        legend.position = c(0.13, 0.25))
+
