@@ -8,7 +8,11 @@ library(ggplot2)
 library(RMySQL)
 
 # connect to SISAL database
+<<<<<<< HEAD
 mydb <- dbConnect(MySQL(), user = "root", password = "BevRed921", dbname = "sisal_v2", 
+=======
+mydb <- dbConnect(MySQL(), user = "root", password = "", dbname = "sisal_v2", 
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
                   host = "localhost")
 
 # load 7.4 to 9.0 ka  data
@@ -27,10 +31,10 @@ for (i in unique(Raw_Data$entity_id)){ # for every entity
   subdat <- Raw_Data %>% filter(entity_id == i & interp_age >= 7800 & interp_age <= 8400)
   if (nrow(subdat) <= 1){ next }
   mean_res <- get_ent_sampling(entity_id = i, age_start = 7800, age_end = 8400)$sampling_mean
-    
+  
   res_out <- rbind(res_out,
-                     data.frame(unique(subdat[c("site_id","site_name","entity_id")]),
-                                mean_res = mean_res))
+                   data.frame(unique(subdat[c("site_id","site_name","entity_id")]),
+                              mean_res = mean_res))
 }
 
 res_out <- res_out %>% filter(mean_res <= 30)
@@ -76,14 +80,22 @@ for (i in unique(res_out$entity_id)){
   
   if (any(ci_x$confint[,c(1,3)] == 0) | any(ci_x$confint[,c(1,3)] < 0) | any(is.na(ci_x$confint[,c(1,3)]))){ 
     no_signal <- rbind(no_signal, unique(subdat[,c("site_id","site_name","entity_id","entity_name","longitude","latitude")])) 
+<<<<<<< HEAD
     } else {
+=======
+  } else {
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
     # output breakpoints
     ci_ages <- data.frame(site_id = unique(subdat$site_id), site_name = unique(subdat$site_name), entity_id = unique(subdat$entity_id), entity_name = unique(subdat$entity_name),
                           longitude = unique(subdat$longitude), latitude = unique(subdat$latitude),
                           bp = subdat$interp_age[ci_x$confint[,2]],
                           CI2_5 = subdat$interp_age[ci_x$confint[,1]],
                           CI97_5 = subdat$interp_age[ci_x$confint[,3]]
+<<<<<<< HEAD
                           )
+=======
+    )
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
     
     bp_dat <- rbind(bp_dat, ci_ages)
     
@@ -108,7 +120,11 @@ x2 <- x %>% filter(n_bp == 2) # 26
 #  entities <- x2$entity_id[(i-8):i]
 #  subdat <- dtrend_dat %>% filter(entity_id %in% entities)
 #  sub_bp <- bp_dat %>% filter(entity_id %in% entities)
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
 #  file_no <- ifelse(i == 9, 1, ifelse(i == 18, 2, 3))
 #  filename <- paste("signals_82_", file_no, ".pdf", sep = "")
 
@@ -121,10 +137,14 @@ x2 <- x %>% filter(n_bp == 2) # 26
 #  dev.off()
 #}
 
+<<<<<<< HEAD
 # exclude entities: 53, 54, 295, 374, 388, 395, 540, 608, 690
 #x2 <- x2 %>% filter(!entity_id %in% c(53, 54, 295, 374, 388, 395, 540, 608, 690)) # 20 entities
 #x2 <- x2 %>% filter(!entity_id %in% c(51, 53, 295, 374, 690))
 
+=======
+# calculate anomaly and duration for each record
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
 anom_2bp <- data.frame()
 for (i in unique(x2$entity_id)){
   sub_bp <- bp_dat %>% filter(entity_id == i)
@@ -152,7 +172,11 @@ for (i in unique(x2$entity_id)){
   anom <- d18O_event - d18O_base
   anom_lower <- d18O_event_lower - d18O_base_lower
   anom_upper <- d18O_event_upper - d18O_base_upper
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
   sub_df <- data.frame(unique(sub_bp[,c(1:6)]), 
                        min_bp = as.numeric(min(sub_bp$bp)), max_bp = as.numeric(max(sub_bp$bp)),
                        sample_id_min_bp = subdat[which.min(abs(subdat$interp_age-as.numeric(min(sub_bp$bp)))),"sample_id"],
@@ -172,6 +196,7 @@ for (i in unique(x2$entity_id)){
 anom_2bp <- anom_2bp %>% mutate(diff_from_base_sd = round(abs(anom) - abs(d18Osd_base), digits = 1)) 
 no_signal <- rbind(no_signal, filter(anom_2bp, diff_from_base_sd <= 0)[,c("site_id","site_name","entity_id","entity_name","longitude","latitude")])
 anom_2bp <- anom_2bp %>% filter(diff_from_base_sd > 0)
+<<<<<<< HEAD
 
 # filter to those that are sig diff from base
 no_signal <- rbind(no_signal, filter(anom_2bp, ttest_Pval >= 0.001)[,c("site_id","site_name","entity_id","entity_name","longitude","latitude")])
@@ -199,6 +224,15 @@ anom_2bp <- anom_2bp %>% filter(ttest_Pval <= 0.001)
 ## grps
 #grps <- read.csv("82_signal_grps.csv")
 #colnames(grps)[1] <- "entity_id"
+=======
+
+# filter to those that are sig diff from base
+no_signal <- rbind(no_signal, filter(anom_2bp, ttest_Pval >= 0.001)[,c("site_id","site_name","entity_id","entity_name","longitude","latitude")])
+anom_2bp <- anom_2bp %>% filter(ttest_Pval <= 0.001)
+
+
+### For records with >2 breakoints, identify the significant segments (grps) (= event)
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
 
 ## entities with 3 breakpoints
 x3 <- x %>% filter(n_bp == 3) # 23
@@ -217,10 +251,17 @@ x3 <- x %>% filter(n_bp == 3) # 23
 #  entities <- x3$entity_id[(i-8):i]
 #  subdat <- dtrend_dat %>% filter(entity_id %in% entities)
 #  sub_bp <- bp_dat %>% filter(entity_id %in% entities)
+<<<<<<< HEAD
   
 #  file_no <- ifelse(i == 9, 1, ifelse(i == 18, 2, 3))
 #  filename <- paste("signals_82_3bp_", file_no, ".pdf", sep = "")
   
+=======
+
+#  file_no <- ifelse(i == 9, 1, ifelse(i == 18, 2, 3))
+#  filename <- paste("signals_82_3bp_", file_no, ".pdf", sep = "")
+
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
 #  p <- ggplot() + geom_line(data = subdat, aes(x = interp_age, y = d18O_detrended)) +
 #    geom_vline(data = sub_bp, aes(xintercept = bp), col = "red") +
 #    facet_wrap(.~ entity_id)
@@ -231,17 +272,26 @@ x3 <- x %>% filter(n_bp == 3) # 23
 
 # 
 grps <- data.frame()
+<<<<<<< HEAD
 for (i in unique(x3$entity_id)){
+=======
+for (i in unique(x3$entity_id)){ #for each record
+  # filter to record#s breakpoints and detrended data
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
   subdat <- dtrend_dat %>% filter(entity_id == i) %>% arrange(interp_age)
   sub_bp <- bp_dat %>% filter(entity_id == i) %>% arrange(bp)
   
+  # segment record based on breakpoints
   subdat$grp <- with(subdat, ifelse(interp_age <= sub_bp$bp[1] | interp_age >= sub_bp$bp[3], 1,
-                       ifelse(interp_age >= sub_bp$bp[1] & interp_age <= sub_bp$bp[2], 2, 3)))
+                                    ifelse(interp_age >= sub_bp$bp[1] & interp_age <= sub_bp$bp[2], 2, 3)))
   subdat$grp <- as.factor(subdat$grp)
+  
+  # Tukey's HSD of segments
   sub.lm <- lm(d18O_detrended ~ grp, data = subdat)
   sub.av <- aov(sub.lm)
   
   sub_hsd <- TukeyHSD(sub.av)$grp
+<<<<<<< HEAD
   #sub_hsd2 <- HSD.test(sub.av, trt = 'grp', alpha = 0.001)
   
   ## QC checks
@@ -268,6 +318,33 @@ for (i in unique(x3$entity_id)){
       if (all(c(grp_2, grp_3) > 0) | all(c(grp_2, grp_3) < 0)){
         grps <- rbind(grps, data.frame(entity_id = rep(i, 2), group = c(2,3)))
       } else {
+=======
+  
+  ## Identifying the event
+  sub_hsd2 <- as.data.frame(sub_hsd[which(grepl("1", rownames(sub_hsd))),]) #sig diff of segments from base
+  sub_hsd3 <- t(as.data.frame(sub_hsd[which(!grepl("1", rownames(sub_hsd))),])) #sig diff of non-base segments from one another
+  
+  n_sig <- nrow(sub_hsd2[which(sub_hsd2[,4] <= 0.001),]) #how many segments are sig diff from base?
+  
+  if (n_sig == 0){ #no segments sig diff from base, i.e. no event
+    no_signal <- rbind(no_signal, unique(subdat[,c("site_id","site_name", "entity_id", "entity_name", "longitude", "latitude")]))
+  } else if (n_sig == 1){ #only 1 segment is sig diff from base
+    if (sub_hsd3[,4] < 0.001){ #non-base segements are sig diff from one another
+      event_grp <- rownames(sub_hsd2[which(sub_hsd2[,4] <= 0.001),])
+      event_grp <- as.numeric(sub("-1", "", event_grp))
+      grps <- rbind(grps, data.frame(entity_id = i, group = event_grp))
+    } else { #non-base segments are insig from one another - merge
+      grps <- rbind(grps, data.frame(entity_id = rep(i,2), group = c(2,3)))
+    }
+  } else {
+    if (sub_hsd3[,4] < 0.001){ #both non-base segments are sig diff from base
+      grp_2 <- mean(subdat[which(subdat$grp == 2),"d18O_detrended"]) - mean(subdat[which(subdat$grp == 1),"d18O_detrended"])
+      grp_3 <- mean(subdat[which(subdat$grp == 3),"d18O_detrended"]) - mean(subdat[which(subdat$grp == 1),"d18O_detrended"])
+      
+      if (all(c(grp_2, grp_3) > 0) | all(c(grp_2, grp_3) < 0)){ # both segments have same direction anomalies - merge
+        grps <- rbind(grps, data.frame(entity_id = rep(i, 2), group = c(2,3)))
+      } else { # segments have diff direction anomalies - pick segment with the biggest anomalies
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
         base_mean <- mean(subdat[which(subdat$grp == 1),"d18O_detrended"])
         anom_grp2 <- round(grp_2 - base_mean, digits = 1)
         anom_grp3 <- round(grp_3 - base_mean, digits = 1)
@@ -281,6 +358,7 @@ for (i in unique(x3$entity_id)){
       }
     }
   }
+<<<<<<< HEAD
   
   base_grp <- sub_hsd2$groups[which(rownames(sub_hsd2$groups) == 1),"groups"]
   # 
@@ -293,10 +371,15 @@ for (i in unique(x3$entity_id)){
 #x3 <- x3 %>% filter(!entity_id %in% c(63, 142, 279, 436, 546, 613)) # 14 entities
 
 
+=======
+}
+
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
 
 ## entities with 4 breakpoints
 x4 <- x %>% filter(n_bp == 4) # 9
 
+<<<<<<< HEAD
 #subdat <- dtrend_dat %>% filter(entity_id %in% unique(x4$entity_id))
 #sub_bp <- bp_dat %>% filter(entity_id %in% unique(x4$entity_id)) 
 
@@ -306,6 +389,8 @@ x4 <- x %>% filter(n_bp == 4) # 9
 #  facet_wrap(.~ as.factor(entity_id), scales = "free_y") +
 #  ggtitle("4 breakpoints")
 
+=======
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
 # visualise
 #subdat <- dtrend_dat %>% filter(entity_id %in% x4$entity_id)
 #sub_bp <- bp_dat %>% filter(entity_id %in% x4$entity_id)
@@ -319,7 +404,11 @@ x4 <- x %>% filter(n_bp == 4) # 9
 #print(p)
 #dev.off()
 
+<<<<<<< HEAD
 #
+=======
+# grps
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
 for (i in unique(x4$entity_id)){
   subdat <- dtrend_dat %>% filter(entity_id == i) %>% arrange(interp_age)
   sub_bp <- bp_dat %>% filter(entity_id == i) %>% arrange(bp)
@@ -333,6 +422,7 @@ for (i in unique(x4$entity_id)){
   
   sub_hsd <- TukeyHSD(sub.av)$grp
   #sub_hsd2 <- HSD.test(sub.av, trt = 'grp', alpha = 0.001)
+<<<<<<< HEAD
   
   ## QC checks
   sub_hsd2 <- as.data.frame(sub_hsd[which(grepl("1", rownames(sub_hsd))),])
@@ -340,6 +430,15 @@ for (i in unique(x4$entity_id)){
   
   n_sig <- nrow(sub_hsd2[which(sub_hsd2[,4] <= 0.001),])
   
+=======
+  
+  ## QC checks
+  sub_hsd2 <- as.data.frame(sub_hsd[which(grepl("1", rownames(sub_hsd))),])
+  sub_hsd3 <- as.data.frame(sub_hsd[which(!grepl("1", rownames(sub_hsd))),])
+  
+  n_sig <- nrow(sub_hsd2[which(sub_hsd2[,4] <= 0.001),])
+  
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
   if (n_sig == 0){ # 220
     no_signal <- rbind(no_signal, unique(subdat[,c("site_id","site_name", "entity_id", "entity_name", "longitude", "latitude")]))
     
@@ -351,11 +450,19 @@ for (i in unique(x4$entity_id)){
   } else if (n_sig == 2){
     if (nrow(sub_hsd3[which(sub_hsd3$`p adj` <= 0.001),]) == 0){ # all events are insig from one another, ent = 52
       grps <- rbind(grps, data.frame(entity_id = rep(i, 3), group = 2:4))
+<<<<<<< HEAD
       } else { #327, 351, 442
         event_grp <- rownames(sub_hsd2[which(sub_hsd2[,4] <= 0.001),])
         event_grp <- as.numeric(sub("-1","", event_grp))
         grps <- rbind(grps, data.frame(entity_id = rep(i, length(event_grp)+1), group = event_grp[1]:event_grp[2]))
       }
+=======
+    } else { #327, 351, 442
+      event_grp <- rownames(sub_hsd2[which(sub_hsd2[,4] <= 0.001),])
+      event_grp <- as.numeric(sub("-1","", event_grp))
+      grps <- rbind(grps, data.frame(entity_id = rep(i, length(event_grp)+1), group = event_grp[1]:event_grp[2]))
+    }
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
     
   } else if (n_sig == 3){
     if (nrow(sub_hsd3[which(sub_hsd3$`p adj` <= 0.001),]) == 3){
@@ -367,19 +474,42 @@ for (i in unique(x4$entity_id)){
         grps <- rbind(grps, data.frame(entity_id = rep(i, 3), group = 2:4))
       }
     } else {
+<<<<<<< HEAD
         event_grp <- rownames(sub_hsd3[which(sub_hsd3[,4] >= 0.001),])
         event_grp <- as.numeric(as.vector(strsplit(event_grp, "-"))[[1]])
         grps <- rbind(grps, data.frame(entity_id = rep(i, length(event_grp)+1), group = event_grp[1]:event_grp[2]))
+=======
+      event_grp <- rownames(sub_hsd3[which(sub_hsd3[,4] >= 0.001),])
+      event_grp <- as.numeric(as.vector(strsplit(event_grp, "-"))[[1]])
+      grps <- rbind(grps, data.frame(entity_id = rep(i, length(event_grp)+1), group = event_grp[1]:event_grp[2]))
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
     }
   }
 }
 
 
+<<<<<<< HEAD
 # exclude entities: 220, 351, 415 = hiatus
 #x4 <- x4 %>% filter(!entity_id %in% c(220,351,415))
+=======
+## 5 bp's
+x5 <- x %>% filter(n_bp == 5) # 2
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
 
+# visualise
+#subdat <- dtrend_dat %>% filter(entity_id %in% x5$entity_id)
+#sub_bp <- bp_dat %>% filter(entity_id %in% x5$entity_id)
 
+#filename <- "signals_82_5bp.pdf"
 
+#p <- ggplot() + geom_line(data = subdat, aes(x = interp_age, y = d18O_detrended)) +
+#  geom_vline(data = sub_bp, aes(xintercept = bp), col = "red") +
+#  facet_wrap(.~ entity_id)
+#pdf(filename, width = 20/2.54, height = 18/2.54)
+#print(p)
+#dev.off()
+
+<<<<<<< HEAD
 ## 5 bp's
 x5 <- x %>% filter(n_bp == 5) # 2
 
@@ -396,6 +526,8 @@ x5 <- x %>% filter(n_bp == 5) # 2
 #print(p)
 #dev.off()
 
+=======
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
 subdat <- dtrend_dat %>% filter(entity_id == 591)
 sub_bp <- bp_dat %>% filter(entity_id == 591)
 
@@ -408,12 +540,17 @@ sub.lm <- lm(d18O_detrended ~ grp, data = subdat)
 sub.av <- aov(sub.lm)
 
 sub_hsd <- TukeyHSD(sub.av)$grp
+<<<<<<< HEAD
 
 grps <- rbind(grps, data.frame(entity_id = rep(591,2), group = c(3,4)))
 
 #ggplot() + geom_line(data =subdat, aes(x = interp_age, y = d18O_detrended)) + 
 #  geom_vline(data = sub_bp, aes(xintercept = bp), col = "red") +
 #  facet_wrap(.~ entity_id)
+=======
+
+grps <- rbind(grps, data.frame(entity_id = rep(591,2), group = c(3,4)))
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
 
 
 # calculate anomalies
@@ -449,10 +586,19 @@ for (i in unique(grps$entity_id)){
 anom_bp <- anom_bp %>% mutate(diff_from_base_sd = round(abs(anom) - abs(d18Osd_base), digits = 1)) 
 no_signal <- rbind(no_signal, filter(anom_bp, diff_from_base_sd <= 0)[,c("site_id","site_name","entity_id","entity_name","longitude","latitude")])
 anom_bp <- anom_bp %>% filter(diff_from_base_sd > 0)
+<<<<<<< HEAD
 
 
 # combine
 all_dat <- rbind(anom_2bp[,-c(14:17)], anom_bp[,c(1:13)])
+=======
+
+
+# combine
+all_dat <- rbind(anom_2bp[,-c(14:17)], anom_bp[,c(1:13)])
+
+# calculate duration
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
 all_dat$duration <- all_dat$max_bp - all_dat$min_bp
 all_dat$event_centre <- all_dat$max_bp - (all_dat$duration/2)
 
@@ -474,6 +620,7 @@ supp_out <- all_dat %>% select(entity_id, site_name, longitude, latitude, max_bp
 colnames(supp_out)[5:6] <- c("start","end")
 
 write.csv(supp_out, "anom_table.csv", row.names = F)
+<<<<<<< HEAD
 
 ## entities with no bp
 #nosignal <- Raw_Data %>% filter(entity_id %in% c(53, 54, 295, 374, 395, 540, 690, 63, 142, 279, 436, 546, 613, 220,351, 305))
@@ -481,7 +628,10 @@ write.csv(supp_out, "anom_table.csv", row.names = F)
 #no_signal2 <- Raw_Data %>% filter(entity_id %in% c(51, 53, 295, 374, 449, 690, 96,495,563,305))
 #no_signal2 <- unique(no_signal2[,c("site_id", "site_name", "entity_id", "entity_name", "longitude", "latitude")])
 #no_signal <- rbind(no_signal, no_signal2)
+=======
+>>>>>>> a5a1b9e373979374db80ee0e4f69fb402cc39be6
 
+# anomaly plot
 ggplot() + 
   #geom_point(data = no_signal, aes(x = longitude, y = latitude)) +
   geom_point(data = all_dat, aes(x = longitude, y = latitude, fill = anom), shape = 21, size = 3) + borders("world") +
@@ -489,6 +639,8 @@ ggplot() +
   coord_fixed(ylim = c(-50,60), xlim = c(-120,150))
 
 write.csv(no_signal, "C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/spel_nosignal_82.csv", row.names = F)
+
+
 
 
 ## Do sites with multiple entities show agreement amongst records

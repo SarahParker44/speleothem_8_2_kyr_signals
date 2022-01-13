@@ -104,7 +104,7 @@ for (i in seq(1000,12000,500)){
     if (length(opt_brks) == 0){ next }
     if (is.na(opt_brks)) {next}
     if (opt_brks == 0){ next }
-
+    
     
     ci_x <- confint(bp, breaks = opt_brks) #get timings of bp's with conf intervals
     
@@ -112,10 +112,10 @@ for (i in seq(1000,12000,500)){
     
     # output breakpoints
     ci_ages <- data.frame(site_id = unique(subdat$site_id), entity_id = unique(subdat$entity_id), entity_name = unique(subdat$entity_name
-                                                                                                                       ), longitude = unique(subdat$longitude), latitude = unique(subdat$latitude),
-                          bp = subdat$interp_age[ci_x$confint[,2]],
-                          CI2_5 = subdat$interp_age[ci_x$confint[,1]],
-                          CI97_5 = subdat$interp_age[ci_x$confint[,3]])
+    ), longitude = unique(subdat$longitude), latitude = unique(subdat$latitude),
+    bp = subdat$interp_age[ci_x$confint[,2]],
+    CI2_5 = subdat$interp_age[ci_x$confint[,1]],
+    CI97_5 = subdat$interp_age[ci_x$confint[,3]])
     
     bp_wind <- rbind(bp_wind, ci_ages)
     
@@ -140,7 +140,7 @@ for (i in seq(1000,12000,500)){
   bp_out <- rbind(bp_out, bp_wind) 
   dtrend_dat <- rbind(dtrend_dat, dtrend_wind)
   nentities <- rbind(nentities, all_entbins)
-                             
+  
 }
 proc.time() - ptm 
 
@@ -189,9 +189,9 @@ nentities <- unique(nentities[,-7]) # remove overlap counts
 #write.csv(bp_out2, "C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/Hol_bp.csv", row.names = F)
 #write.csv(dtrend_dat, "C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/Hol_dtrend_dat.csv", row.names = F)
 #write.csv(nentities, "C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/Hol_bp_nentities.csv", row.names = F)
-bp_out2x <- read.csv("C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/Hol_bp.csv")
-dtrend_dat <- read.csv("C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/Hol_dtrend_dat.csv")
-nentities <- read.csv("C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/Hol_bp_nentities.csv")
+bp_out2 <- read.csv("C:/Users/ph805612/OneDrive - University of Reading/Documents/abrupt_Holocene/Hol_bp.csv")
+dtrend_dat <- read.csv("C:/Users/ph805612/OneDrive - University of Reading/Documents/abrupt_Holocene/Hol_dtrend_dat.csv")
+nentities <- read.csv("C:/Users/ph805612/OneDrive - University of Reading/Documents/abrupt_Holocene/Hol_bp_nentities.csv")
 
 ## bp as %
 
@@ -209,7 +209,7 @@ bp_out2$bin <- as.numeric(as.character(bp_out2$bin))
 # calculate number of entities with at least 1 bp in each 300yr bin
 bp_out3 <- bp_out2 %>% group_by(entity_id, bin) %>% summarise(n_ent = n()) %>%
   filter((n_ent > 1)) %>% group_by(bin) %>%
-    summarise(n_ents_w_bp = n())
+  summarise(n_ents_w_bp = n())
 
 #calculate % of entities with at least 1 bp in each bin
 bp_pcent <- left_join(bp_out3, nentities2)
@@ -218,11 +218,24 @@ bp_pcent$pcent <- bp_pcent$n_ents_w_bp/bp_pcent$`n()`
 
 # plot % entities with bp's through Holocene
 bp_pcent$bin_start <- bp_pcent$bin - 150; bp_pcent$bin_end <- bp_pcent$bin + 150
-bp_pcent <- bp_pcent %>% group_by(bin, pcent) %>% summarise(bin_age = c(bin-150, bin+150))
+#bp_pcent <- bp_pcent %>% group_by(bin, pcent) %>% summarise(bin_age = c(bin-150, bin+150))
 
+##
+bp_pcenta <- bp_pcent; bp_pcentb <- bp_pcent
+bp_pcenta$bin_age <- bp_pcenta$bin-150
+bp_pcentb$bin_age <- bp_pcentb$bin+150
+bp_pcent <- rbind(bp_pcenta, bp_pcentb)
+
+bp_pcent <- bp_pcent %>% arrange(bin)
+
+png("C:/Users/ph805612/OneDrive - University of Reading/Documents/abrupt_Holocene/Fig2_Holocene_bp.png", width = 18, height = 12, units = "cm", res = 200)
 ggplot(data = bp_pcent, aes(x = bin_age, y = pcent*100)) + 
   geom_line(stat = "identity") + 
+  geom_segment(aes(x = 8200, y = 80, xend = 8200, yend = 73), arrow = arrow(length = unit(0.1, "cm")), col = "red") +
+  geom_text(aes(x = 8200, y = 82, label = "8.2 ka"), col = "red") +
   scale_x_continuous(breaks = seq(0,12000,1000), expand = c(0.01,0.01)) +
-  ylab("% entities") +
+  ylab("% entities") + xlab("Age (years BP)") +
   theme_bw()
+dev.off()
+
 
