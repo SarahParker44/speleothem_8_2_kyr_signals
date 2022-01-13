@@ -1,6 +1,6 @@
 ## plot fig 1: map
 
-setwd("C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/speleothem_8_2_kyr_signals/")
+setwd(".../speleothem_8_2_kyr_signals/")
 
 library(rgdal)
 library(ggplot2)
@@ -9,14 +9,14 @@ library(ggnewscale)
 
 
 # load world map data
-wmap <- readOGR(dsn = "C:/Users/sarah/OneDrive - University of Reading/Documents/SISAL/R_programming/Data/ne_110m_land", layer = "ne_110m_land")
+wmap <- readOGR(dsn = "ne_110m_land", layer = "ne_110m_land")
 wmap@data$id <- rownames(wmap@data)
 worldMap <- fortify(wmap)
 wmap_DF <- merge(worldMap, wmap@data, by = "id")
 
 
 # load WOKAM (carbonate bedrock) data
-wokam <- readOGR(dsn = "C:/Users/sarah/OneDrive - University of Reading/Documents/SISAL/R_programming/Data/WHYMAP_WOKAM/shp", layer = "whymap_karst__v1_poly")
+wokam <- readOGR(dsn = "WHYMAP_WOKAM/shp", layer = "whymap_karst__v1_poly")
 wokam@data$id <- rownames(wokam@data)
 wokamMap <- fortify(wokam)
 wokam_DF <- merge(wokamMap, wokam@data, by = "id")
@@ -24,10 +24,10 @@ wokam_DF <- merge(wokamMap, wokam@data, by = "id")
 
 # load spel sites
 sites_82 <- read.csv("spel_82_signals.csv")
-sites_no82 <- read.csv("C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/spel_nosignal_82.csv")
+sites_no82 <- read.csv("spel_nosignal_82.csv")
 sites_82 <- rbind(sites_82[,1:6], sites_no82)
 
-sites_Hol <- read.csv("C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/Hol_bp_nentities.csv")
+sites_Hol <- read.csv("Hol_bp_nentities.csv")
 sites_Hol <- sites_Hol %>% group_by(site_id, entity_id, longitude, latitude) %>% summarise(n()) 
 
 sites_82$grp <- "8.2 ka analysis"
