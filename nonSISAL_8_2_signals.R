@@ -1,6 +1,6 @@
 ### breakpoint analysis for non SISAL records
 
-setwd("C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/")
+setwd(".../speleothem_8_2_kyr_signals")
 
 library(tidyr)
 library(dplyr)
@@ -14,24 +14,12 @@ Kaite <- read.csv("Kaite.csv"); colnames(Kaite)[1] <- "Age"; Kaite$site_name <- 
 Wuya <- read.csv("Wuya.csv"); colnames(Wuya)[1] <- "Age"; Wuya$site_name <- "Wuya"
 Klang <- read.csv("Klang.csv"); colnames(Klang)[1] <- "Age"; Klang$site_name <- "Klang"
 Anjohibe <- read.table("Anjohibe.txt", header = T); Anjohibe$site_name <- "Anjohibe"
+ReyMarcos <- read.csv("ReyMarcos.csv"); colnames(ReyMarcos)[1] <- "Age"; ReyMarcos$site_name <- "Rey marcos"
 
 dat <- rbind(Padre, Paixao, Tigre_perdido, Kaite[,-2],Wuya, Klang, Anjohibe)
 dat <- na.omit(dat)
 dat <- dat %>% filter(Age <10000)
 
-## Breakpoint analysis
-#load function for finding optimal breakpoints
-opt_bpts <- function(x) {
-  #x = bpts_sum$RSS["BIC",]
-  n <- length(x)
-  lowest <- vector("logical", length = n-1)
-  lowest[1] <- FALSE
-  for (i in 2:n) {
-    lowest[i] <- x[i] < x[i-1] & x[i] < x[i+1]
-  }
-  out <- as.integer(names(x)[lowest])
-  return(out)
-}
 
 # for every 1000 year window (with 50% overlap)
 
@@ -47,13 +35,6 @@ for (i in unique(dat$site_name)){
   subdat$detrended_d18O <- residuals(subdat_lm)
   
   bp <- breakpoints(subdat$detrended_d18O ~ 1) #breakpoint analysis
-  bpts_sum <- summary(bp) 
-  opt_brks <- opt_bpts(bpts_sum$RSS["BIC",]) #optimal no. breakpoints
-  
-  if (length(opt_brks) > 1){ opt_brks <- as.numeric(names(which.min(bpts_sum$RSS["BIC",]))) }
-  if (length(opt_brks) == 0){ next }
-  if (is.na(opt_brks)) {next}
-  if (opt_brks == 0){ next }
   
   ci_x <- confint(bp, breaks = opt_brks) #get timings of bp's with conf intervals
   
@@ -86,7 +67,7 @@ p <- ggplot() +
 
 x <- bp_out %>% group_by(site_name) %>% summarise(n_bp = n())
 
-# 2 bp's (Tigre Perdido, Kaite, Wuya)
+# 2 bp's (Kaite, Wuya, Rey Marcos)
 x2 <- x %>% filter(n_bp == 2)
 
 anom_2bp <- data.frame()
@@ -205,6 +186,7 @@ anom_all[anom_all$site_name == "Paixao",9:10] <- c(-12.39,-41.3)
 anom_all[anom_all$site_name == "Tigre Perdido",9:10] <- c(-5.940556,-77.308056)
 anom_all[anom_all$site_name == "Wuya",9:10] <- c(33.8167,105.4333)
 anom_all[anom_all$site_name == "Klang",9:10] <- c(8.33,98.73)
+anom_all[anom_all$site_name == "Rey marcos",9:10] <- c(15.4, -90.3)
 
 ggplot(data = anom_all, aes(x = longitude, y = latitude, fill = anom)) + 
   geom_point(shape = 21, size = 3) + borders("world") +
