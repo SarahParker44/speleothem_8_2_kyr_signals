@@ -1,6 +1,6 @@
 ### Detecting abrupt events in Holocene speleothem records
 
-setwd("C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/speleothem_8_2_kyr_signals/")
+setwd(".../speleothem_8_2_kyr_signals/")
 
 library(dplyr)
 library(strucchange)
@@ -8,7 +8,7 @@ library(ggplot2)
 library(RMySQL)
 
 # connect to SISAL database
-mydb <- dbConnect(MySQL(), user = "root", password = "", dbname = "sisalv2", 
+mydb <- dbConnect(MySQL(), user = "root", password = "", dbname = "sisal_v2", 
                   host = "localhost")
 
 # load Holocene data
@@ -21,42 +21,30 @@ Raw_Data <- Raw_Data %>% filter(entity_status != "superseded")
 min_res <- 30
 
 ## load function for calculating mean temporal resolution (excluding hiatuses and gaps) - 'get_ent_sampling'
-load("entity_sampling_mean_res.R")
+source("entity_sampling_mean_res.R")
 
 res_out <- data.frame()
 highres_dat <- data.frame()
 for (i in unique(Raw_Data$entity_id)){ # for every entity
-  subdat <- Raw_Data %>% filter(entity_id == i)
+  subdat <- Raw_Data %>% filter(entity_id == i) # filter to that entity
   
   subdat2 <- data.frame()
-  for (j in seq(300,12000,300)){ # for every 300 year bin
-    sub_subdat <- subdat %>% filter(interp_age >= (j-300) & interp_age <= j)
-    if (nrow(sub_subdat) <= 1){ next }
-    mean_res <- get_ent_sampling(entity_id = i, age_start = (j-500), age_end = j)$sampling_mean
+  for (j in seq(300,12000,300)){ # for every 300 year bin within entity
+    sub_subdat <- subdat %>% filter(interp_age >= (j-300) & interp_age <= j) #filter to bin
+    if (nrow(sub_subdat) <= 1){ next } # if no data, skip
+    mean_res <- get_ent_sampling(entity_id = i, age_start = (j-500), age_end = j)$sampling_mean #calc mean sampling res
     
     res_out <- rbind(res_out,
                      data.frame(unique(subdat[c("site_id","site_name","entity_id")]),
                                 bin_centre = j-150,
-                                mean_res = mean_res))
-    if (mean_res >= min_res){ next }#
+                                mean_res = mean_res)) # save
+    if (mean_res >= min_res){ next } # don't include bins with insufficient sampling res
     
-    subdat2 <- rbind(subdat2, sub_subdat)
+    subdat2 <- rbind(subdat2, sub_subdat) #save
   }
   highres_dat <- rbind(highres_dat, subdat2)
 }
 
-#load function for finding optimal breakpoints
-opt_bpts <- function(x) {
-  #x = bpts_sum$RSS["BIC",]
-  n <- length(x)
-  lowest <- vector("logical", length = n-1)
-  lowest[1] <- FALSE
-  for (i in 2:n) {
-    lowest[i] <- x[i] < x[i-1] & x[i] < x[i+1]
-  }
-  out <- as.integer(names(x)[lowest])
-  return(out)
-}
 
 # breakpoint analysis for every entity and every 1000 year window (with 50% overlap)
 n_records <- data.frame()
@@ -64,21 +52,22 @@ bp_out <- data.frame()
 dtrend_dat <- data.frame()
 nentities <- data.frame()
 ptm <- proc.time()
-for (i in seq(1000,12000,500)){
+for (i in seq(1000,12000,500)){ # for each window
   
-  window_dat <- highres_dat %>% filter(interp_age >= (i-1000) & interp_age <= i)
+  window_dat <- highres_dat %>% filter(interp_age >= (i-1000) & interp_age <= i) # filter to window
   
-  ## filter to records > 200 years long
+  ## filter to records > 200 years long (don't want records that are too short)
   dat_length <- data.frame()
-  for (j in unique(window_dat$entity_id)){
-    sub_length <- window_dat %>% filter(entity_id == j)
-    length <- max(sub_length$interp_age) - min(sub_length$interp_age)
-    sub_df <- data.frame(entity_id = j, length = length)
+  for (j in unique(window_dat$entity_id)){ #for each entity
+    sub_length <- window_dat %>% filter(entity_id == j) #filter dat to entity
+    length <- max(sub_length$interp_age) - min(sub_length$interp_age) #calculate length
+    sub_df <- data.frame(entity_id = j, length = length) #save
     dat_length <- rbind(dat_length, sub_df)
   }
-  dat_length <- dat_length %>% filter(length <= 200)
-  window_dat <- window_dat %>% filter(!entity_id %in% dat_length$entity_id)
+  dat_length <- dat_length %>% filter(length <= 200) # filter
+  window_dat <- window_dat %>% filter(!entity_id %in% dat_length$entity_id) # filter to entities of sufficient length
   
+  #save number of records within this window
   n_records <- rbind(n_records, 
                      data.frame(win_start = (i-1000), win_end = i, n_entities = length(unique(window_dat$entity_id))))
   
@@ -86,27 +75,22 @@ for (i in seq(1000,12000,500)){
   bp_wind <- data.frame()
   dtrend_wind <- data.frame()
   all_entbins <- data.frame()
-  for (j in unique(window_dat$entity_id)){ # each entity
-    subdat <- window_dat %>% filter(entity_id == j)
+  for (j in unique(window_dat$entity_id)){ # for each entity
+    subdat <- window_dat %>% filter(entity_id == j) #filter data to that entity
     
-    ## detrend
+    ## detrend using linear regression (remove long term trend)
     subdat_lm <- lm(d18O_measurement ~ interp_age, data = subdat)
     lm_predicted <- predict(subdat_lm)
     subdat$detrended_d18O <- residuals(subdat_lm)
     
     if (nrow(subdat) <= 13){ next }  
-    bp <- breakpoints(subdat$detrended_d18O ~ 1)#subdat$interp_age) #breakpoint analysis
-    bpts_sum <- summary(bp) 
-    opt_brks <- opt_bpts(bpts_sum$RSS["BIC",]) #optimal no. breakpoints
+    bp <- breakpoints(subdat$detrended_d18O ~ 1)# #breakpoint analysis
     
-    if (length(opt_brks) > 1){ opt_brks <- as.numeric(names(which.min(bpts_sum$RSS["BIC",]))) }
+    if (length(bp$breakpoints) == 0){ next } else if (is.na(length(bp$breakpoints))) {
+      next} else if (length(bp$breakpoints == 0)){ 
+        next } else {
     
-    if (length(opt_brks) == 0){ next }
-    if (is.na(opt_brks)) {next}
-    if (opt_brks == 0){ next }
-    
-    
-    ci_x <- confint(bp, breaks = opt_brks) #get timings of bp's with conf intervals
+    ci_x <- confint(bp, breaks = length(bp$breakpoints)) #get timings of bp's with conf intervals
     
     if (any(ci_x$confint[,c(1,3)] == 0) | any(ci_x$confint[,c(1,3)] < 0) | any(is.na(ci_x$confint[,c(1,3)]))){ next }
     
@@ -180,18 +164,21 @@ for (i in unique(bp_out$entity_id)){
   }
   
   bp_out2 <- rbind(bp_out2, subdat)
-  
+}
 }
 
 nentities <- unique(nentities[,-7]) # remove overlap counts
 
 
-#write.csv(bp_out2, "C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/Hol_bp.csv", row.names = F)
-#write.csv(dtrend_dat, "C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/Hol_dtrend_dat.csv", row.names = F)
-#write.csv(nentities, "C:/Users/sarah/OneDrive/Documents/PhD/abrupt_Holocene/Hol_bp_nentities.csv", row.names = F)
-bp_out2 <- read.csv("C:/Users/ph805612/OneDrive - University of Reading/Documents/abrupt_Holocene/Hol_bp.csv")
-dtrend_dat <- read.csv("C:/Users/ph805612/OneDrive - University of Reading/Documents/abrupt_Holocene/Hol_dtrend_dat.csv")
-nentities <- read.csv("C:/Users/ph805612/OneDrive - University of Reading/Documents/abrupt_Holocene/Hol_bp_nentities.csv")
+## avg ar for each bin (for randomly generated data for sig. testing)
+get_ar_coeff <- function(x){
+  ar_x <- arima(x, order = c(1,0,0))
+  
+  return(as.numeric(ar_x$coef[1]))
+}
+
+ar_out <- xx %>% group_by(entity_id, win_start) %>% summarise(ar = get_ar_coeff(d18O_detrended)) %>% group_by(win_start) %>% summarise(mean(ar))
+
 
 ## bp as %
 
@@ -218,7 +205,6 @@ bp_pcent$pcent <- bp_pcent$n_ents_w_bp/bp_pcent$`n()`
 
 # plot % entities with bp's through Holocene
 bp_pcent$bin_start <- bp_pcent$bin - 150; bp_pcent$bin_end <- bp_pcent$bin + 150
-#bp_pcent <- bp_pcent %>% group_by(bin, pcent) %>% summarise(bin_age = c(bin-150, bin+150))
 
 ##
 bp_pcenta <- bp_pcent; bp_pcentb <- bp_pcent
@@ -228,7 +214,7 @@ bp_pcent <- rbind(bp_pcenta, bp_pcentb)
 
 bp_pcent <- bp_pcent %>% arrange(bin)
 
-png("C:/Users/ph805612/OneDrive - University of Reading/Documents/abrupt_Holocene/Fig2_Holocene_bp.png", width = 18, height = 12, units = "cm", res = 200)
+png("Fig2_Holocene_bp.png", width = 18, height = 12, units = "cm", res = 200)
 ggplot(data = bp_pcent, aes(x = bin_age, y = pcent*100)) + 
   geom_line(stat = "identity") + 
   geom_segment(aes(x = 8200, y = 80, xend = 8200, yend = 73), arrow = arrow(length = unit(0.1, "cm")), col = "red") +
